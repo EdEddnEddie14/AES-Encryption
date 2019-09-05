@@ -63,7 +63,7 @@ public class AES {
 		68,  17, 146, 217,  35,  32,  46, 137, 180, 124, 184,  38, 119, 153, 227, 165, 
 		103,  74, 237, 222, 197,  49, 254,  24,  13,  99, 140, 128, 192, 247, 112,   7};
 
-    public static final int[] A_LOG_TABLE =
+	public static final int[] A_LOG_TABLE =
 		{1,   3,   5,  15,  17,  51,  85, 255,  26,  46, 114, 150, 161, 248,  19,  53, 
 		95, 225,  56,  72, 216, 115, 149, 164, 247,   2,   6,  10,  30,  34, 102, 170, 
 		229,  52,  92, 228,  55,  89, 235,  38, 106, 190, 217, 112, 144, 171, 230,  49, 
@@ -80,8 +80,8 @@ public class AES {
 		69, 207,  74, 222, 121, 139, 134, 145, 168, 227,  62,  66, 198,  81, 243,  14, 
 		18,  54,  90, 238,  41, 123, 141, 140, 143, 138, 133, 148, 167, 242,  13,  23, 
 		57,  75, 221, 124, 132, 151, 162, 253,  28,  36, 108, 180, 199,  82, 246,   1};
-
-    public static int[][][] roundKeys = new int[15][4][4];
+	
+	public static int[][][] roundKeys = new int[15][4][4];
 	
 	// 2D array used to store each line of hexadecimal input supplied by the user,
 	// assumed that each line contains a String of exactly 32 hex characters (or 16 "bytes"),
@@ -105,7 +105,8 @@ public class AES {
 		int roundKey = 0;
 		for (int byteCounter = 0; byteCounter < 64; byteCounter += 2) {
 			String current = initialKey.substring(byteCounter, byteCounter + 2);
-			roundKeys[roundKey][row][col] = Integer.parseInt(current, 16);
+			roundKeys[roundKey][row][col] = Integer.parseInt(current, 16); // parses two hex characters into an int
+			// input key text to be interpreted into roundKeys by column major order
 			row = (row + 1) % 4;
 			if (row == 0)
 				col = (col + 1) % 4;
