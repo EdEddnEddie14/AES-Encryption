@@ -129,8 +129,8 @@ public class AES {
 					col = 0;
 					for (int byteCounter = 0; byteCounter < 32; byteCounter += 2) {
 						String currentByte = currentLine.substring(byteCounter, byteCounter + 2);
-						state[row][col] = Integer.parseInt(currentByte, 16);
-						row = (row + 1) % 4;
+						state[row][col] = Integer.parseInt(currentByte, 16); // hexidemical character parsing again
+						row = (row + 1) % 4; // column major order again
 						if (row == 0)
 							col = (col + 1) % 4;
 					}
@@ -138,12 +138,12 @@ public class AES {
 					if (encryption) {
 						out = new File(filename + ".enc");
 						PrintWriter pw = new PrintWriter(out.getName(), "UTF-8");
-						addRoundKey(0);
+						addRoundKey(0); // intial round
 						int round = 1;
 						while (round < 15) {
 							subBytes(true);
 							shiftRows();
-							if (round != 14)
+							if (round != 14) // encryption algorithm doesn't use mixColumns operation in final round
 								mixColumns();
 							addRoundKey(round);
 							round++;
@@ -156,13 +156,13 @@ public class AES {
 						int round = 14;
 						while (round > 0) {
 							addRoundKey(round);
-							if (round != 14)
+							if (round != 14) // encryption algorithm doesn't use mixColumns operation in final round
 								invMixColumns();
 							invShiftRows();
 							subBytes(false);
 							round--;
 						}
-						addRoundKey(0);
+						addRoundKey(0); // initial round
 						printState(pw);
 						pw.close();
 					}
@@ -172,7 +172,9 @@ public class AES {
 		} catch(IOException ioe) {}
 	}
 	
-	// pad a line of input from input file
+	// pad a line of input from input file so that it fits code's standards,
+	// i.e. String.length == 32, all characters are Hexidemical, and strings
+	// that are too short are zero'd out
 	public static String padInput(String input) {
 		input = input.toUpperCase();
 		if (input.length() > 32)
@@ -191,7 +193,7 @@ public class AES {
 	
 	// print out state to output file
 	public static void printState(PrintWriter pw) {
-		for (int col = 0; col < state[0].length; col++) {
+		for (int col = 0; col < state[0].length; col++) { // columns major order
 			for (int row = 0; row < state.length; row++) {
 				String hex = Integer.toHexString(state[row][col]).toUpperCase();
 				if (hex.length() < 2) // must have a leading zero that got cut
