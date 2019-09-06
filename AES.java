@@ -146,7 +146,8 @@ public class AES {
 						while (round < 15) {
 							subBytes(true);
 							shiftRows();
-							// encryption algorithm doesn't use mixColumns operation in final round
+							// encryption algorithm doesn't use
+							// mixColumns operation in final round
 							if (round != 14)
 								mixColumns();
 							addRoundKey(round);
@@ -160,7 +161,8 @@ public class AES {
 						int round = 14;
 						while (round > 0) {
 							addRoundKey(round);
-							// encryption algorithm doesn't use mixColumns operation in final round
+							// encryption algorithm doesn't use
+							// mixColumns operation in final round
 							if (round != 14)
 								invMixColumns();
 							invShiftRows();
