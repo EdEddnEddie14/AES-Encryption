@@ -132,7 +132,7 @@ public class AES {
 					col = 0;
 					for (int byteCounter = 0; byteCounter < 32; byteCounter += 2) {
 						String currentByte = currentLine.substring(byteCounter, byteCounter + 2);
-						state[row][col] = Integer.parseInt(currentByte, 16); // hexidemical character parsing again
+						state[row][col] = Integer.parseInt(currentByte, 16);
 						row = (row + 1) % 4; // column major order again
 						if (row == 0)
 							col = (col + 1) % 4;
@@ -146,7 +146,8 @@ public class AES {
 						while (round < 15) {
 							subBytes(true);
 							shiftRows();
-							if (round != 14) // encryption algorithm doesn't use mixColumns operation in final round
+							// encryption algorithm doesn't use mixColumns operation in final round
+							if (round != 14)
 								mixColumns();
 							addRoundKey(round);
 							round++;
@@ -159,7 +160,8 @@ public class AES {
 						int round = 14;
 						while (round > 0) {
 							addRoundKey(round);
-							if (round != 14) // encryption algorithm doesn't use mixColumns operation in final round
+							// encryption algorithm doesn't use mixColumns operation in final round
+							if (round != 14)
 								invMixColumns();
 							invShiftRows();
 							subBytes(false);
