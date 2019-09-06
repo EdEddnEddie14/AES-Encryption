@@ -81,6 +81,8 @@ public class AES {
 		18,  54,  90, 238,  41, 123, 141, 140, 143, 138, 133, 148, 167, 242,  13,  23, 
 		57,  75, 221, 124, 132, 151, 162, 253,  28,  36, 108, 180, 199,  82, 246,   1};
 	
+	// 3D array that stores 15 different 4x4 2D arrays for the addRoundKey operation
+	// used in both encrpytion and decrpytion (one for each of 14 rounds plus initial addRoundkey)
 	public static int[][][] roundKeys = new int[15][4][4];
 	
 	// 2D array used to store each line of hexadecimal input supplied by the user,
@@ -122,9 +124,7 @@ public class AES {
 			s = new Scanner(data);
 			while (s.hasNextLine()) {
 				String currentLine = padInput(s.nextLine());
-				System.out.println(currentLine);
 				if (currentLine != null) {
-					System.out.println("HERE");
 					row = 0;
 					col = 0;
 					for (int byteCounter = 0; byteCounter < 32; byteCounter += 2) {
@@ -138,7 +138,7 @@ public class AES {
 					if (encryption) {
 						out = new File(filename + ".enc");
 						PrintWriter pw = new PrintWriter(out.getName(), "UTF-8");
-						addRoundKey(0); // intial round
+						addRoundKey(0); // initial round
 						int round = 1;
 						while (round < 15) {
 							subBytes(true);
@@ -148,7 +148,7 @@ public class AES {
 							addRoundKey(round);
 							round++;
 						}
-						printState(pw);
+						printState(pw); // print encrypted hexidecimal data to output (.enc) file
 						pw.close();
 					} else {
 						out = new File(filename + ".dec");
@@ -193,7 +193,7 @@ public class AES {
 	
 	// print out state to output file
 	public static void printState(PrintWriter pw) {
-		for (int col = 0; col < state[0].length; col++) { // columns major order
+		for (int col = 0; col < state[0].length; col++) { // column major order
 			for (int row = 0; row < state.length; row++) {
 				String hex = Integer.toHexString(state[row][col]).toUpperCase();
 				if (hex.length() < 2) // must have a leading zero that got cut
@@ -204,6 +204,8 @@ public class AES {
 		pw.println();
 	}
 	
+	// print out state to std out,
+	// meant for testing purposes
 	public static void printState2() {
 		for (int col = 0; col < state[0].length; col++) {
 			for (int row = 0; row < state.length; row++) {
@@ -249,7 +251,7 @@ public class AES {
 		}
 	}
 	
-	// inverse of the shiftRows operation
+	// inverse of the shiftRows operation for decryption
 	public static void invShiftRows() {
 		for (int row = 0; row < state.length; row++) {
 			for (int shifts = 0; shifts < row; shifts++) {
@@ -268,73 +270,75 @@ public class AES {
 	
 	// mixColumns operation of the AES algorithm
 	public static void mixColumns() {
-		for (int col = 0; col < state[0].length; col++) {
+		for (int col = 0; col < state[0].length; col++)
 			mixColumnsHelper(col);
-		}
 	}
 
-    // In the following two methods, the input c is the column number in
-    // your evolving state matrix st (which originally contained 
-    // the plaintext input but is being modified).  Notice that the state here is defined as an
-    // array of bytes.  If your state is an array of integers, you'll have
-    // to make adjustments. 
-    public static void mixColumnsHelper(int col) {
-		// This is another alternate version of mixColumn, using the 
-		// logtables to do the computation.
-		
-		int a[] = new int[4];
-		
-		// note that a is just a copy of st[.][c]
+	/* helper method to mixColumns() that multiplies the specified column (according
+	to the supplied int col) by the fixed matrix:
+	2 3 1 1
+	1 2 3 1
+	1 1 2 3
+	3 1 1 2
+	Matrix multiplication is performed according to Rijndael's Galois Field
+	*/
+	public static void mixColumnsHelper(int col) {
+		int[] a = new int[4];
+		// a is just a copy of state[.][c]
 		for (int i = 0; i < 4; i++) 
 		    a[i] = state[i][col];
-		
-		// This is exactly the same as mixColumns1, if 
-		// the mul columns somehow match the b columns there.
+
+		// In the Galois Field, the addition operation is done by XORing the values
 		state[0][col] = mul(2,a[0]) ^ a[2] ^ a[3] ^ mul(3,a[1]);
 		state[1][col] = mul(2,a[1]) ^ a[3] ^ a[0] ^ mul(3,a[2]);
 		state[2][col] = mul(2,a[2]) ^ a[0] ^ a[1] ^ mul(3,a[3]);
 		state[3][col] = mul(2,a[3]) ^ a[1] ^ a[2] ^ mul(3,a[0]);
-    }
+	}
     
-    // helper method for mixColumns
-    public static int mul(int a, int b) {
+    	// helper method for mixColumns and invMixColumns
+	// that multiplies two values together according to Rijndael's Galois Field
+	public static int mul(int a, int b) {
 		int inda = (a < 0) ? (a + 256) : a;
 		int indb = (b < 0) ? (b + 256) : b;
 
-		if ( (a != 0) && (b != 0) ) {
+		if ((a != 0) && (b != 0)) {
 		    int index = (LOG_TABLE[inda] + LOG_TABLE[indb]);
-		    int val = A_LOG_TABLE[ index % 255 ];
+		    int val = A_LOG_TABLE[index % 255];
 		    return val;
-		}
-		else 
+		} else 
 		    return 0;
-    }
+  	}
     
-    // inverse of the mix columns operation of AES algorithm
-    public static void invMixColumns() {
-    	for (int col = 0; col < state[0].length; col++) {
+	// inverse of the mixColumns operation of AES algorithm
+	public static void invMixColumns() {
+		for (int col = 0; col < state[0].length; col++)
 			invMixColumnsHelper(col);
-		}
-    }
+	}
     
-    // helper method for invMixColumns
-    public static void invMixColumnsHelper(int c) {
-    	int a[] = new int[4];
-    	
-    	// note that a is just a copy of st[.][c]
-    	for (int i = 0; i < 4; i++) 
-    	    a[i] = state[i][c];
-    	
-    	state[0][c] = mul(0xE,a[0]) ^ mul(0xB,a[1]) ^ mul(0xD, a[2]) ^ mul(0x9,a[3]);
-    	state[1][c] = mul(0xE,a[1]) ^ mul(0xB,a[2]) ^ mul(0xD, a[3]) ^ mul(0x9,a[0]);
-    	state[2][c] = mul(0xE,a[2]) ^ mul(0xB,a[3]) ^ mul(0xD, a[0]) ^ mul(0x9,a[1]);
-    	state[3][c] = mul(0xE,a[3]) ^ mul(0xB,a[0]) ^ mul(0xD, a[1]) ^ mul(0x9,a[2]);
-	} // invMixColumn2
+	/* helper method to invMixColumns() that multiplies the specified column (according
+	to the supplied int col) by the fixed matrix:
+	14 11 13 9
+	9  14 11 13
+	13  9 14 11
+	11 13 9  14
+	*/
+	public static void invMixColumnsHelper(int col) {
+		int a[] = new int[4];
+		// a is just a copy of state[.][c]
+		for (int i = 0; i < 4; i++) 
+	    		a[i] = state[i][col];
+
+		state[0][col] = mul(0xE,a[0]) ^ mul(0xB,a[1]) ^ mul(0xD, a[2]) ^ mul(0x9,a[3]);
+		state[1][col] = mul(0xE,a[1]) ^ mul(0xB,a[2]) ^ mul(0xD, a[3]) ^ mul(0x9,a[0]);
+		state[2][col] = mul(0xE,a[2]) ^ mul(0xB,a[3]) ^ mul(0xD, a[0]) ^ mul(0x9,a[1]);
+		state[3][col] = mul(0xE,a[3]) ^ mul(0xB,a[0]) ^ mul(0xD, a[1]) ^ mul(0x9,a[2]);
+	}
 
     
-    // generate keys for rounds 2-14
-    public static void generateRoundKeys() {
-		int rcon = 1;
+	// generate keys for rounds 2-14,
+	// intitial roundKey and round 1 key are taken directly from 32 byte key supplied by user
+	public static void generateRoundKeys() {
+		int rcon = 1; // round constant that will always be a power of 2, starting with 2^0
 		for (int round = 2; round < 15; round++) {
 			for (int col = 0; col < roundKeys[round][0].length; col++) {
 				int prevCol = (col + 3) % 4;
@@ -346,36 +350,38 @@ public class AES {
 						roundKeys[round][row][col] ^= roundKeys[round - 2][row][col];
 				} else {
 					for (int row = 0; row < roundKeys[round].length; row++) {
-						roundKeys[round][row][col] = roundKeys[round][row][prevCol] ^ roundKeys[round - 2][row][col];
+						roundKeys[round][row][col] = roundKeys[round][row][prevCol] ^
+						roundKeys[round - 2][row][col];
 					}
 				}
 			}
 			if (round % 2 == 0)
-				rcon <<= 1;
+				rcon <<= 1; // increment power of 2 every even round
 		}
-    }
+	}
     
-    // function used the initial column of each roundKey
-    public static void scheduleCore(int round, int rcon) {
-    	// rotate each byte up one
-    	if (round % 2 == 0) { // operation specific to even roundroundKeys
-	    	int temp = roundKeys[round][0][0];
-	    	for (int row = 0; row < 3; row ++)
-	    		roundKeys[round][row][0] = roundKeys[round][row + 1][0];
-	    	roundKeys[round][3][0] = temp;
-    	}
-    	
-    	for (int row = 0; row < 4; row++) {
-    		int rowIndex = (roundKeys[round][row][0] >>> 4);
+	// function used the initial column of each roundKey
+	public static void scheduleCore(int round, int rcon) {
+		// rotate each byte up one (commonly referred to as RotWord operation)
+		if (round % 2 == 0) { // operation specific to even roundKeys
+			int temp = roundKeys[round][0][0];
+			for (int row = 0; row < 3; row ++)
+				roundKeys[round][row][0] = roundKeys[round][row + 1][0];
+			roundKeys[round][3][0] = temp;
+		}
+
+		// sub values for corresponding S-Box values, as done in subBytes operation
+		for (int row = 0; row < 4; row++) {
+			int rowIndex = (roundKeys[round][row][0] >>> 4);
 			int colIndex = (roundKeys[round][row][0] & 0x0F);
 			roundKeys[round][row][0] = S_BOX[rowIndex][colIndex];
-    	}
-    	
-    	if (round % 2 == 0) // operation specific to even roundroundKeys
-    		roundKeys[round][0][0] ^= rcon;
-    }
+		}
+
+		if (round % 2 == 0) // operation specific to even roundroundKeys
+			roundKeys[round][0][0] ^= rcon;
+	}
 	
-    // addRoundKey operation of AES algorithm
+	// addRoundKey operation of AES algorithm
 	public static void addRoundKey(int round) {
 		for (int row = 0; row < state.length; row++) {
 			for (int col = 0; col < state[row].length; col++)
