@@ -7,7 +7,7 @@ import java.util.Scanner;
 public class AES {
 	
 	// fixed substitution box used for subBytes operation of encryption algorithm
-	public static final int[][] S_BOX =
+  	public static final int[][] S_BOX =
 		{{0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76},
 		{0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0},
 		{0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15},
@@ -44,7 +44,8 @@ public class AES {
 		{0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61},
 		{0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d}};
 	
-	// 
+	// table that contains exponentiation values and thus can be used to quickly
+	// multiply two values in Rijndael's Galois Field
 	public static final int[] LOG_TABLE =
 		{0,   0,  25,   1,  50,   2,  26, 198,  75, 199,  27, 104,  51, 238, 223,   3, 
 		100,   4, 224,  14,  52, 141, 129, 239,  76, 113,   8, 200, 248, 105,  28, 193, 
@@ -63,6 +64,8 @@ public class AES {
 		68,  17, 146, 217,  35,  32,  46, 137, 180, 124, 184,  38, 119, 153, 227, 165, 
 		103,  74, 237, 222, 197,  49, 254,  24,  13,  99, 140, 128, 192, 247, 112,   7};
 
+	// exponention table that LOG_TABLE was derived from,
+	// also used when multipling values in Galois Field
 	public static final int[] A_LOG_TABLE =
 		{1,   3,   5,  15,  17,  51,  85, 255,  26,  46, 114, 150, 161, 248,  19,  53, 
 		95, 225,  56,  72, 216, 115, 149, 164, 247,   2,   6,  10,  30,  34, 102, 170, 
@@ -280,7 +283,6 @@ public class AES {
 	1 2 3 1
 	1 1 2 3
 	3 1 1 2
-	Matrix multiplication is performed according to Rijndael's Galois Field
 	*/
 	public static void mixColumnsHelper(int col) {
 		int[] a = new int[4];
@@ -295,8 +297,12 @@ public class AES {
 		state[3][col] = mul(2,a[3]) ^ a[1] ^ a[2] ^ mul(3,a[0]);
 	}
     
-    	// helper method for mixColumns and invMixColumns
-	// that multiplies two values together according to Rijndael's Galois Field
+    	/* helper method for mixColumns and invMixColumns
+	that multiplies two values together according to Rijndael's Galois Field,
+	operation is sped up by using values to index into LOG_TABLE, adding
+	subsequent values and indexing into A_LOG_TABLE with the sum modded by 255,
+	NOTE: THIS CODE WAS PROVIDED TO ME BY DR. BILL YOUNG, PROFESSOR OF CS361
+	*/
 	public static int mul(int a, int b) {
 		int inda = (a < 0) ? (a + 256) : a;
 		int indb = (b < 0) ? (b + 256) : b;
@@ -342,7 +348,8 @@ public class AES {
 		for (int round = 2; round < 15; round++) {
 			for (int col = 0; col < roundKeys[round][0].length; col++) {
 				int prevCol = (col + 3) % 4;
-				if (col == 0) {
+				// XOR (i - 1)th column with (i - 8)th column to generate ith column
+				if (col == 0) { // first column of a new roundKey has additional operations
 					for (int row = 0; row < roundKeys[round].length; row++)
 						roundKeys[round][row][col] = roundKeys[round - 1][row][prevCol];
 					scheduleCore(round, rcon);
@@ -360,7 +367,7 @@ public class AES {
 		}
 	}
     
-	// function used the initial column of each roundKey
+	// function used for the initial column of each roundKey
 	public static void scheduleCore(int round, int rcon) {
 		// rotate each byte up one (commonly referred to as RotWord operation)
 		if (round % 2 == 0) { // operation specific to even roundKeys
@@ -377,7 +384,7 @@ public class AES {
 			roundKeys[round][row][0] = S_BOX[rowIndex][colIndex];
 		}
 
-		if (round % 2 == 0) // operation specific to even roundroundKeys
+		if (round % 2 == 0) // operation specific to even roundKeys
 			roundKeys[round][0][0] ^= rcon;
 	}
 	
